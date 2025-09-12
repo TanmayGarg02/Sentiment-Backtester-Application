@@ -48,4 +48,8 @@ public class SentimentDataService {
                 .findByTickerOrderByCollectedAtDesc(ticker)
                 .orElse(null);
     }
+
+    public void deleteSentiment(Long id) {
+        sentimentRepository.deleteById(id);
+    }
 }

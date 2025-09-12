@@ -8,5 +8,7 @@ import lombok.Data;
 public class SentimentResponse {
     private String ticker;
     private double score;
-    private String lastUpdatedIso; // ISO instant string from Redis
+    private String sentimentLabel;   // optional but useful
+    private String source;           // optional but useful
+    private String lastUpdatedIso;
 }

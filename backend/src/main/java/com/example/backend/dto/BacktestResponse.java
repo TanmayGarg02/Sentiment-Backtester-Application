@@ -7,11 +7,18 @@ import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
-public class BacktestResult {
+public class BacktestResponse {
     private String ticker;
+    private String strategyName;
     private LocalDate startDate;
     private LocalDate endDate;
+
+    // From DB entity
     private double totalReturn;
+    private double sharpeRatio;
+    private double maxDrawdown;
+
+    // Computed dynamically
     private double avgDailyReturn;
     private int days;
 }
