@@ -1,27 +1,36 @@
 import os
-from huggingface_hub import InferenceClient
-from transformers import pipeline
-from nlp_worker import sentiment_utils
-from .. import config
+import requests
 
-class HFClient:
-    def __init__(self):
-        self.mode = config.HF_MODE
-        self.model_id = config.HF_MODEL_ID
-        self.api_token = config.HF_API_TOKEN
+# Hugging Face Inference API endpoint for FinBERT
+HF_MODEL = "ProsusAI/finbert"   # Best FinBERT for financial sentiment
+HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
-        if self.mode == "hf_api":
-            self.client = InferenceClient(model=self.model_id, token=self.api_token)
-        elif self.mode == "local":
-            self.pipeline = pipeline("sentiment-analysis", model=self.model_id)
-        else:
-            raise ValueError(f"Unsupported HF_MODE: {self.mode}")
+# Get API key from environment variable
+HF_API_KEY = os.getenv("HF_API_KEY")
 
-    def get_sentiment(self, text: str):
-        if self.mode == "hf_api":
-            result = self.client.text_classification(text)
-        else:
-            result = self.pipeline(text)
+if not HF_API_KEY:
+    raise ValueError("Missing Hugging Face API key. Please set HF_API_KEY in your environment.")
 
-        # Result example: [{'label': 'positive', 'score': 0.97}]
-        return sentiment_utils.parse_result(result[0])
+# HTTP headers for Hugging Face API
+HEADERS = {"Authorization": f"Bearer {HF_API_KEY}"}
+
+
+def analyze_sentiment_api(texts):
+    """
+    Call Hugging Face Inference API for sentiment analysis.
+
+    Args:
+        texts (list[str]): List of input texts (e.g. headlines/news).
+
+    Returns:
+        list: Raw response from Hugging Face API (list of list of dicts with label & score).
+    """
+    payload = {"inputs": texts}
+    response = requests.post(HF_API_URL, headers=HEADERS, json=payload)
+
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"Hugging Face API error {response.status_code}: {response.text}"
+        )
+
+    return response.json()

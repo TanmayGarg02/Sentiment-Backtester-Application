@@ -1,0 +1,9 @@
+# Core
+requests
+python-dotenv
+
+# Async (if you decide to fetch multiple sources in parallel later)
+aiohttp
+
+# Optional: if using Reddit via praw instead of RapidAPI
+praw
