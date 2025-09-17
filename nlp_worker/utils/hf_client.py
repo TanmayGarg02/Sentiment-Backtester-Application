@@ -34,7 +34,7 @@ def analyze_sentiment_batch(texts):
         raise RuntimeError(f"Hugging Face API error {response.status_code}: {response.text}")
 
     results = []
-    for res in response.json():
-        best = max(res[0], key=lambda x: x["score"])
+    for res in response.json():  # each res is already a list of predictions (dicts)
+        best = max(res, key=lambda x: x["score"])  # no [0] here
         results.append({"label": best["label"], "score": best["score"]})
     return results

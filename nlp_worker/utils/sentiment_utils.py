@@ -1,10 +1,10 @@
 from typing import List, Dict
-from .hf_client import analyze_sentiment_api
+from .hf_client import analyze_sentiment, analyze_sentiment_batch
 
-
-def parse_hf_response(raw_response: List[Dict]) -> List[Dict]:
+def parse_hf_response(raw_response):
     """
     Convert raw Hugging Face API response into a simplified structure.
+    Handles both single-dict and list-of-dicts cases.
     """
     results = []
 
@@ -13,32 +13,43 @@ def parse_hf_response(raw_response: List[Dict]) -> List[Dict]:
             results.append({"label": "neutral", "score": 0.0})
             continue
 
-        # Sort by confidence score
-        sorted_preds = sorted(prediction_set, key=lambda x: x["score"], reverse=True)
-        top_pred = sorted_preds[0]
+        # Case 1: already a dict (e.g., {"label": "neutral", "score": 0.93})
+        if isinstance(prediction_set, dict) and "label" in prediction_set:
+            results.append({
+                "label": prediction_set["label"].lower(),
+                "score": round(prediction_set["score"], 4)
+            })
+            continue
 
-        results.append({
-            "label": top_pred["label"].lower(),
-            "score": round(top_pred["score"], 4)
-        })
+        # Case 2: list of dicts (normal HF response)
+        if isinstance(prediction_set, list) and isinstance(prediction_set[0], dict):
+            sorted_preds = sorted(prediction_set, key=lambda x: x["score"], reverse=True)
+            top_pred = sorted_preds[0]
+            results.append({
+                "label": top_pred["label"].lower(),
+                "score": round(top_pred["score"], 4)
+            })
+            continue
+
+        # Fallback
+        results.append({"label": "neutral", "score": 0.0})
 
     return results
 
-
-def analyze_sentiment(text: str) -> Dict:
+def analyze_sentiment_text(text: str) -> Dict:
     """
-    Convenience function: runs text through HF API and parses response.
+    Wrapper for single-text sentiment analysis.
     """
-    raw = analyze_sentiment_api([text])
+    raw = analyze_sentiment(text)  # HF client single call
     parsed = parse_hf_response(raw)
-    return parsed[0]  # single text → return single dict
+    return parsed[0]
 
 
 def batch_process_texts(texts: List[str]) -> List[Dict]:
     """
-    Batch version: takes list of texts, returns list of sentiment results.
+    Run batch sentiment analysis and return cleaned results.
     """
-    raw = analyze_sentiment_api(texts)
+    raw = analyze_sentiment_batch(texts)  # HF client batch call
     parsed = parse_hf_response(raw)
 
     return [
