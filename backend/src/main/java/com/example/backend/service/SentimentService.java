@@ -1,41 +1,71 @@
 package com.example.backend.service;
 
+import com.example.backend.cache.RedisCacheService;
+import com.example.backend.dto.SentimentApiResponse;
 import com.example.backend.dto.SentimentResponse;
 import com.example.backend.model.SentimentData;
-import com.example.backend.cache.RedisCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @Service
 @RequiredArgsConstructor
 public class SentimentService {
 
     private final RedisCacheService redisCacheService;
-    private final SentimentDataService sentimentDataService; // inject DB service
+    private final SentimentDataService sentimentDataService;
 
-    /**
-     * Retrieve the latest sentiment score for the ticker.
-     * If Redis has data, use it; else fall back to DB.
-     */
+    // WebClient instance to call Python FastAPI
+    private final WebClient webClient = WebClient.builder()
+            .baseUrl("http://localhost:8000") // ✅ your FastAPI base URL
+            .build();
+
     public SentimentResponse getSentiment(String ticker) {
         Double score = redisCacheService.getSentimentScore(ticker);
         String lastUpdated = redisCacheService.getLastUpdatedTimestamp(ticker);
 
-        // Default values
         String label = "Neutral";
         String source = "N/A";
 
-        // If DB has richer info, use it
-        SentimentData latest = sentimentDataService.getLatestSentiment(ticker);
-        if (latest != null) {
-            label = latest.getSentimentLabel();
-            source = latest.getSource();
-            if (score == null) score = latest.getSentimentScore(); // fallback
-            if (lastUpdated == null) lastUpdated = latest.getCollectedAt().toString();
+        if (score == null) {
+            // Call Python FastAPI
+            SentimentApiResponse apiResp = webClient.get()
+                    .uri("/sentiment/{ticker}", ticker)
+                    .retrieve()
+                    .bodyToMono(SentimentApiResponse.class)
+                    .block();
+
+            if (apiResp != null) {
+                score = apiResp.getScore();
+                label = apiResp.getLabel();
+                source = "PythonNLP";
+
+                // Save to Redis
+                redisCacheService.storeSentimentScore(ticker, score);
+
+                // Save to DB
+                SentimentData entity = new SentimentData();
+                entity.setTicker(ticker);
+                entity.setSentimentScore(score);
+                entity.setSentimentLabel(label);
+                entity.setSource(source);
+                entity.setCollectedAt(java.time.LocalDateTime.now());
+                sentimentDataService.saveSentiment(entity);
+            }
+        } else {
+            // Cache hit: enrich with DB info if available
+            SentimentData latest = sentimentDataService.getLatestSentiment(ticker);
+            if (latest != null) {
+                label = latest.getSentimentLabel();
+                source = latest.getSource();
+                if (lastUpdated == null) {
+                    lastUpdated = latest.getCollectedAt().toString();
+                }
+            }
         }
 
         if (score == null) {
-            score = 0.0; // ensure no nulls
+            score = 0.0; // safe default
         }
 
         return new SentimentResponse(ticker, score, label, source, lastUpdated);
