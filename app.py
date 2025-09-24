@@ -1,4 +1,3 @@
-# app.py
 from fastapi import FastAPI, HTTPException
 from nlp_worker.utils import analyze_sentiment
 from nlp_worker.apis.news_client import fetch_news
@@ -35,7 +34,9 @@ def get_news_sentiment(ticker: str, limit: int = 5):
         news_articles = fetch_news(ticker, config.NEWS_API_KEY, limit=limit)
         results = []
         for article in news_articles:
-            sentiment = analyze_sentiment(f"{article['title']} {article.get('description', '')}")
+            # Title + description combined for stronger context
+            full_text = f"{article['title']} {article.get('description', '')}"
+            sentiment = analyze_sentiment(full_text)
             results.append({
                 "title": article["title"],
                 "url": article["url"],
@@ -56,7 +57,9 @@ def get_reddit_sentiment(ticker: str, limit: int = 5):
         reddit_posts = fetch_reddit_posts(ticker, limit=limit)
         results = []
         for post in reddit_posts:
-            sentiment = analyze_sentiment(post["title"])
+            # Title + body/selftext combined
+            full_text = f"{post['title']} {post.get('body', '')}"
+            sentiment = analyze_sentiment(full_text)
             results.append({
                 "title": post["title"],
                 "url": post["url"],

@@ -21,6 +21,7 @@ def fetch_reddit_posts(ticker: str, limit: int = 10):
         posts.append({
             "title": submission.title,
             "url": submission.url,
+            "body": submission.selftext if submission.selftext else "",  # add body text
             "score": submission.score
         })
 
