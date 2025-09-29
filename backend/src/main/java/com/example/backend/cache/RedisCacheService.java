@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 public class RedisCacheService {
 
     private final StringRedisTemplate redisTemplate;
-    private static final long TTL_SECONDS = 60 * 60 * 24; // 24 hours default
+    private static final long TTL_SECONDS = 60 * 60 * 3; // 3 hours default
 
     public void storeSentimentScore(String ticker, double score) {
         String key = keyForTicker(ticker);

@@ -20,6 +20,7 @@ public class SentimentData {
     private String source;
     private Double sentimentScore;
     private String sentimentLabel;
+    private String url;
 
     private LocalDateTime collectedAt = LocalDateTime.now();
 }

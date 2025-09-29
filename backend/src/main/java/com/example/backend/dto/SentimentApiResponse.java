@@ -7,4 +7,6 @@ public class SentimentApiResponse {
     private double score;
     private String label;
     private String source;
+    private String url;
+
 }

@@ -11,4 +11,5 @@ public class SentimentResponse {
     private String label;   // optional but useful
     private String source;           // optional but useful
     private String lastUpdatedIso;
+    private String url;
 }
