@@ -1,70 +1,72 @@
-from fastapi import FastAPI, HTTPException
-from nlp_worker.utils import analyze_sentiment
+from fastapi import FastAPI, Query
+from nlp_worker.utils.sentiment_utils import batch_process_texts
 from nlp_worker.apis.news_client import fetch_news
 from nlp_worker.apis.reddit_client import fetch_reddit_posts
-from nlp_worker import config
+import yfinance as yf
+from dotenv import load_dotenv
+load_dotenv()
+
 
 app = FastAPI(title="Sentiment NLP Worker", version="1.0.0")
+
+
+def get_company_name(ticker: str) -> str:
+    try:
+        info = yf.Ticker(ticker).info
+        return info.get("shortName") or ticker
+    except Exception:
+        return ticker
+
 
 @app.get("/")
 def root():
     return {"message": "NLP Worker API is running 🚀"}
 
 
-@app.get("/sentiment/")
-def get_sentiment(text: str):
+@app.get("/sentiment/{ticker}")
+def get_sentiment(ticker: str, limit: int = 5, threshold: float = Query(0.65, ge=0.0, le=1.0)):
     """
-    Analyze sentiment of a given text.
-    Example: /sentiment/?text=Apple%20stock%20is%20falling
+    Fetch news + reddit posts for ticker, analyze sentiment,
+    return only results above a given threshold.
     """
-    try:
-        result = analyze_sentiment(text)
-        return {"text": text, "sentiment": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    company_name = get_company_name(ticker)
+    query = f"{ticker} OR {company_name}"
 
+    results = []
 
-@app.get("/news/{ticker}")
-def get_news_sentiment(ticker: str, limit: int = 5):
-    """
-    Fetch latest financial news for a stock ticker & analyze sentiment.
-    Example: /news/AAPL?limit=3
-    """
-    try:
-        news_articles = fetch_news(ticker, config.NEWS_API_KEY, limit=limit)
-        results = []
-        for article in news_articles:
-            # Title + description combined for stronger context
-            full_text = f"{article['title']} {article.get('description', '')}"
-            sentiment = analyze_sentiment(full_text)
-            results.append({
-                "title": article["title"],
-                "url": article["url"],
-                "sentiment": sentiment
-            })
-        return {"ticker": ticker, "results": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # NEWS
+    news_articles = fetch_news(query, limit=limit)
+    if news_articles:
+        news_texts = [f"{a['title']} {a.get('description','')}" for a in news_articles]
+        sentiments = batch_process_texts(news_texts)
+        for art, sent in zip(news_articles, sentiments):
+            if sent["confidence"] >= threshold:
+                results.append({
+                    "source": "news",
+                    "title": art["title"],
+                    "url": art["url"],
+                    "sentimentLabel": sent["sentiment"],
+                    "sentimentScore": sent["confidence"]
+                })
 
+    # REDDIT
+    reddit_posts = fetch_reddit_posts(query, limit=limit)
+    if reddit_posts:
+        reddit_texts = [f"{p['title']} {p.get('body','')}" for p in reddit_posts]
+        sentiments = batch_process_texts(reddit_texts)
+        for post, sent in zip(reddit_posts, sentiments):
+            if sent["confidence"] >= threshold:
+                results.append({
+                    "source": "reddit",
+                    "title": post["title"],
+                    "url": post["url"],
+                    "sentimentLabel": sent["sentiment"],
+                    "sentimentScore": sent["confidence"]
+                })
 
-@app.get("/reddit/{ticker}")
-def get_reddit_sentiment(ticker: str, limit: int = 5):
-    """
-    Fetch Reddit posts for a stock ticker & analyze sentiment.
-    Example: /reddit/AAPL?limit=3
-    """
-    try:
-        reddit_posts = fetch_reddit_posts(ticker, limit=limit)
-        results = []
-        for post in reddit_posts:
-            # Title + body/selftext combined
-            full_text = f"{post['title']} {post.get('body', '')}"
-            sentiment = analyze_sentiment(full_text)
-            results.append({
-                "title": post["title"],
-                "url": post["url"],
-                "sentiment": sentiment
-            })
-        return {"ticker": ticker, "results": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return {
+        "ticker": ticker,
+        "company": company_name,
+        "threshold": threshold,
+        "results": results
+    }

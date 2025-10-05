@@ -18,9 +18,11 @@ public class SentimentData {
 
     private String ticker;
     private String source;
+    @Column(name = "sentiment_score")
     private Double sentimentScore;
+    @Column(name = "sentiment_label")
     private String sentimentLabel;
     private String url;
 
-    private LocalDateTime collectedAt = LocalDateTime.now();
+    private LocalDateTime date = LocalDateTime.now();
 }

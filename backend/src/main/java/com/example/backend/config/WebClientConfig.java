@@ -6,9 +6,8 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class WebClientConfig {
-    @Value("${python.api.url:http://localhost:8000}")
+    @Value("${python.api.url:http://127.0.0.1:8000}")
     private String pythonApiUrl;
-
     @Bean
     public WebClient pythonWebClient() {
         return WebClient.builder()

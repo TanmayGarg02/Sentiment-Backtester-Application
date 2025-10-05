@@ -1,12 +1,15 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-// ✅ Thunk to fetch sentiment data
 export const fetchSentiment = createAsyncThunk(
-  "sentiment/fetchSentiment",
-  async (ticker) => {
-    const response = await axios.get(`http://localhost:8080/sentiment/${ticker}`);
-    return response.data; // backend should send structured JSON
+  "sentiment/fetch",
+  async (ticker, thunkAPI) => {
+    try {
+      const response = await axios.get(`http://localhost:8080/api/sentiment/${ticker}`);
+      return response.data;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || "Error fetching sentiment");
+    }
   }
 );
 
@@ -30,7 +33,7 @@ const sentimentSlice = createSlice({
       })
       .addCase(fetchSentiment.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error = action.payload;
       });
   },
 });

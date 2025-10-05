@@ -1,6 +1,10 @@
 from typing import List, Dict
 from .hf_client import analyze_sentiment, analyze_sentiment_batch
 
+# FinBERT max input length ~512 tokens (~500 chars is safe).
+MAX_CHARS = 500
+
+
 def parse_hf_response(raw_response):
     """
     Convert raw Hugging Face API response into a simplified structure.
@@ -36,11 +40,16 @@ def parse_hf_response(raw_response):
 
     return results
 
+
 def analyze_sentiment_text(text: str) -> Dict:
     """
     Wrapper for single-text sentiment analysis.
     """
-    raw = analyze_sentiment(text)  # HF client single call
+    if not text:
+        return {"label": "neutral", "score": 0.0}
+
+    clean_text = text[:MAX_CHARS]  # hard truncate
+    raw = analyze_sentiment(clean_text)
     parsed = parse_hf_response(raw)
     return parsed[0]
 
@@ -49,10 +58,15 @@ def batch_process_texts(texts: List[str]) -> List[Dict]:
     """
     Run batch sentiment analysis and return cleaned results.
     """
-    raw = analyze_sentiment_batch(texts)  # HF client batch call
+    truncated = [t[:MAX_CHARS] for t in texts if t]  # truncate each text
+    raw = analyze_sentiment_batch(truncated)
     parsed = parse_hf_response(raw)
 
     return [
-        {"text": text, "sentiment": sentiment["label"], "confidence": sentiment["score"]}
-        for text, sentiment in zip(texts, parsed)
+        {
+            "text": (text[:150] + "...") if len(text) > 150 else text,  # shorten preview
+            "sentiment": sentiment["label"],
+            "confidence": sentiment["score"]
+        }
+        for text, sentiment in zip(truncated, parsed)
     ]

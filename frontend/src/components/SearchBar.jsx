@@ -1,32 +1,27 @@
+// src/components/SearchBar.jsx
 import React, { useState } from "react";
-import { useDispatch } from "react-redux";
-import { fetchSentiment } from "../features/sentimentSlice";
-import { Search } from "lucide-react";
 
-export default function SearchBar() {
-  const [ticker, setTicker] = useState("");
-  const dispatch = useDispatch();
+export default function SearchBar({ onSearch, placeholder = "Enter ticker (e.g. AAPL)" }) {
+  const [value, setValue] = useState("");
 
-  const handleSearch = () => {
-    if (ticker.trim()) {
-      dispatch(fetchSentiment(ticker.trim().toUpperCase()));
-    }
+  const submit = () => {
+    if (!value.trim()) return;
+    onSearch(value.toUpperCase());
   };
 
   return (
-    <div className="flex gap-2 mb-4">
+    <div className="flex gap-2">
       <input
-        type="text"
-        placeholder="Enter stock ticker (e.g. AAPL)"
-        value={ticker}
-        onChange={(e) => setTicker(e.target.value)}
-        className="flex-grow border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 border rounded px-3 py-2"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && submit()}
       />
       <button
-        onClick={handleSearch}
-        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+        onClick={submit}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
       >
-        <Search className="w-4 h-4" />
         Search
       </button>
     </div>

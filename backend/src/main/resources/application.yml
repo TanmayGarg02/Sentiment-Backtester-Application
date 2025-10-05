@@ -4,8 +4,8 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/sentimentdb
-    username: sentiment_user
-    password: sentiment_pass
+    username: postgres
+    password: admin@123
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -16,7 +16,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate   # let Flyway handle schema
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:

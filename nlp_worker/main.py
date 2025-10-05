@@ -1,49 +1,62 @@
 import os
 import sys
+import yfinance as yf
 from dotenv import load_dotenv
 
-from nlp_worker.utils import (
-    analyze_sentiment_batch,
-    analyze_sentiment_text,
-    batch_process_texts,
-)
-from nlp_worker.apis import fetch_news, fetch_reddit_posts
+from nlp_worker.utils.sentiment_utils import batch_process_texts
+from nlp_worker.apis.news_client import fetch_news
+from nlp_worker.apis.reddit_client import fetch_reddit_posts
 
 load_dotenv()
 
 
+def get_company_name(ticker: str) -> str:
+    """
+    Fetch company name from ticker using yfinance.
+    Falls back to ticker itself if lookup fails.
+    """
+    try:
+        info = yf.Ticker(ticker).info
+        return info.get("shortName") or ticker
+    except Exception:
+        return ticker
+
+
 def main():
     ticker = "AAPL"
+    company_name = get_company_name(ticker)
+    query = f"{ticker} OR {company_name}"
 
     print("=== Starting sentiment pipeline ===", flush=True)
+    print(f"Using query: {query}", flush=True)
 
     # --- Fetch news ---
-    print(f"\nFetching news for {ticker}...", flush=True)
-    news_articles = fetch_news(ticker, os.getenv("NEWS_API_KEY"))
+    print(f"\nFetching news for {query}...", flush=True)
+    news_articles = fetch_news(query, limit=5)
 
     if not news_articles:
-        print("No news articles fetched. Check NEWS_API_KEY or API quota.", flush=True)
+        print("No news articles fetched.", flush=True)
     else:
-        news_titles = [article["title"] for article in news_articles[:5] if article.get("title")]
-        sentiments = batch_process_texts(news_titles)
+        news_texts = [f"{a['title']} {a.get('description','')}" for a in news_articles]
+        news_sentiments = batch_process_texts(news_texts)
 
-        for result in sentiments:
+        for result in news_sentiments:
             print(f"[NEWS] {result['text']}", flush=True)
-            print(f" → Sentiment: {result['sentiment']} (score={result['confidence']:.4f})", flush=True)
+            print(f" → {result['sentiment']} (score={result['confidence']:.4f})", flush=True)
 
     # --- Fetch reddit posts ---
-    print(f"\nFetching Reddit posts for {ticker}...", flush=True)
-    reddit_posts = fetch_reddit_posts(ticker, limit=5)
+    print(f"\nFetching Reddit posts for {query}...", flush=True)
+    reddit_posts = fetch_reddit_posts(query, limit=5)
 
     if not reddit_posts:
-        print("No Reddit posts fetched. Check Reddit credentials.", flush=True)
+        print("No Reddit posts fetched.", flush=True)
     else:
-        reddit_titles = [post["title"] for post in reddit_posts if post.get("title")]
-        sentiments = batch_process_texts(reddit_titles)
+        reddit_texts = [f"{p['title']} {p.get('body','')}" for p in reddit_posts]
+        reddit_sentiments = batch_process_texts(reddit_texts)
 
-        for result in sentiments:
+        for result in reddit_sentiments:
             print(f"[REDDIT] {result['text']}", flush=True)
-            print(f" → Sentiment: {result['sentiment']} (score={result['confidence']:.4f})", flush=True)
+            print(f" → {result['sentiment']} (score={result['confidence']:.4f})", flush=True)
 
     print("\n=== Finished ===", flush=True)
 

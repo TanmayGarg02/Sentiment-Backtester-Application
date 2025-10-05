@@ -7,24 +7,36 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "backtest_result")
-@Data
+@Table(name = "backtest_results")
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class BacktestResult {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String strategyName;
     private String ticker;
+
     private LocalDate startDate;
     private LocalDate endDate;
 
     private Double totalReturn;
     private Double sharpeRatio;
     private Double maxDrawdown;
+    @Lob
+    private String parametersJson;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 }

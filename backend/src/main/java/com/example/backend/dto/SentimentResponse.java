@@ -7,9 +7,9 @@ import lombok.Data;
 @AllArgsConstructor
 public class SentimentResponse {
     private String ticker;
-    private double score;
-    private String label;   // optional but useful
-    private String source;           // optional but useful
-    private String lastUpdatedIso;
+    private double sentimentScore;
+    private String sentimentLabel;
+    private String source;
     private String url;
+    private String lastUpdatedIso;
 }

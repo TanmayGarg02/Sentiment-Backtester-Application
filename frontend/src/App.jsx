@@ -1,17 +1,20 @@
-import React from "react";
-import SearchBar from "./components/SearchBar";
-import SentimentResults from "./components/SearchResult";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Home from "./pages/Home";
+import Sentiment from "./pages/Sentiment";
+import Backtest from "./pages/Backtest";
+import History from "./pages/History";
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <h1 className="text-3xl font-bold text-center mb-6 ">
-        📊 Stock Sentiment Dashboard
-      </h1>
-      <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-md">
-        <SearchBar />
-        <SentimentResults />
-      </div>
-    </div>
+    <Router>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/sentiment" element={<Sentiment />} />
+        <Route path="/backtest" element={<Backtest />} />
+        <Route path="/history" element={<History />} />
+      </Routes>
+    </Router>
   );
 }

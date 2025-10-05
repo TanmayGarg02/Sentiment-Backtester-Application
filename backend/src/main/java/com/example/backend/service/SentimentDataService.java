@@ -1,12 +1,10 @@
 package com.example.backend.service;
 
 import com.example.backend.model.SentimentData;
-import com.example.backend.model.SentimentData;
-import com.example.backend.repository.SentimentDataRepository;
 import com.example.backend.repository.SentimentDataRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -35,7 +33,7 @@ public class SentimentDataService {
     /**
      * Get sentiment scores for a ticker in a given date range.
      */
-    public List<SentimentData> getSentimentHistory(String ticker, LocalDate start, LocalDate end) {
+    public List<SentimentData> getSentimentHistory(String ticker, LocalDateTime start, LocalDateTime end) {
         return sentimentRepository.findByTickerAndDateBetween(ticker, start, end);
     }
 
@@ -45,7 +43,7 @@ public class SentimentDataService {
      */
     public SentimentData getLatestSentiment(String ticker) {
         return sentimentRepository
-                .findByTickerOrderByCollectedAtDesc(ticker)
+                .findLatestByTicker(ticker)
                 .orElse(null);
     }
 

@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -25,6 +26,12 @@ public class SentimentController {
         return ResponseEntity.ok(resp);
     }
 
+    @GetMapping("/{ticker}/refresh")
+    public ResponseEntity<SentimentResponse> forceRefresh(@PathVariable String ticker) {
+        SentimentResponse resp = sentimentService.refreshSentiment(ticker.toUpperCase());
+        return ResponseEntity.ok(resp);
+    }
+
     @PostMapping
     public ResponseEntity<SentimentData> saveSentiment(@RequestBody SentimentData sentimentData) {
         return ResponseEntity.ok(sentimentDataService.saveSentiment(sentimentData));
@@ -38,16 +45,23 @@ public class SentimentController {
     @GetMapping("/{ticker}/history")
     public ResponseEntity<List<SentimentData>> getSentimentHistory(
             @PathVariable String ticker,
-            @RequestParam LocalDate start,
-            @RequestParam LocalDate end) {
+            @RequestParam LocalDateTime start,
+            @RequestParam LocalDateTime end) {
         return ResponseEntity.ok(sentimentDataService.getSentimentHistory(ticker.toUpperCase(), start, end));
     }
 
+    /**
+     * Returns the latest sentiment entry from DB (raw stored value, without cache/Python).
+     * Useful for analytics/backtesting.
+     */
     @GetMapping("/{ticker}/latest")
     public ResponseEntity<SentimentData> getLatestSentiment(@PathVariable String ticker) {
         return ResponseEntity.ok(sentimentDataService.getLatestSentiment(ticker.toUpperCase()));
     }
 
+    /**
+     * Deletes a sentiment record by id.
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSentiment(@PathVariable Long id) {
         sentimentDataService.deleteSentiment(id);
